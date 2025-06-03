@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package kvstore;
+
+// Basic key-value pair structure
+message KeyValuePair {
+  string key = 1;
+  string value = 2;
+  int64 timestamp = 3;  // For conflict resolution
+  string version = 4;   // Version vector for consistency
+}
+
+// Node information for cluster management
+message NodeInfo {
+  string node_id = 1;
+  string address = 2;
+  int32 port = 3;
+  bool is_alive = 4;
+  int64 last_heartbeat = 5;
+}
+
+// Request/Response messages for client operations
+message PutRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message PutResponse {
+  bool success = 1;
+  string message = 2;
+  int64 timestamp = 3;
+}
+
+message GetRequest {
+  string key = 1;
+}
+
+message GetResponse {
+  bool found = 1;
+  string value = 2;
+  string message = 3;
+  int64 timestamp = 4;
+}
+
+message DeleteRequest {
+  string key = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Internal node-to-node communication messages
+message ReplicationRequest {
+  KeyValuePair data = 1;
+  string operation = 2;  // "PUT", "DELETE"
+}
+
+message ReplicationResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message HeartbeatRequest {
+  NodeInfo sender = 1;
+  repeated NodeInfo known_nodes = 2;
+}
+
+message HeartbeatResponse {
+  NodeInfo responder = 1;
+  repeated NodeInfo known_nodes = 2;
+}
+
+message SyncRequest {
+  string requesting_node_id = 1;
+  repeated string keys_to_sync = 2;
+}
+
+message SyncResponse {
+  repeated KeyValuePair data = 1;
+}
+
+message ClusterStateRequest {
+  string requesting_node_id = 1;
+}
+
+message ClusterStateResponse {
+  repeated NodeInfo nodes = 1;
+  map<string, string> hash_ring = 2;
+}
+
+// Service definitions
+service KVStoreService {
+  // Client-facing operations
+  rpc Put(PutRequest) returns (PutResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+}
+
+service NodeService {
+  // Node-to-node operations
+  rpc Replicate(ReplicationRequest) returns (ReplicationResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc SyncData(SyncRequest) returns (SyncResponse);
+  rpc GetClusterState(ClusterStateRequest) returns (ClusterStateResponse);
+}
