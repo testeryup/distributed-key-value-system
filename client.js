@@ -417,13 +417,22 @@ class KVStoreClient {
 }
 
 // Main execution
+
 async function main() {
-    // Parse command line arguments
+    // Parse command line arguments - FIXED VERSION
     const args = process.argv.slice(2);
     let nodeAddresses = ['localhost:50051', 'localhost:50052', 'localhost:50053'];
 
-    if (args.length > 0) {
-        nodeAddresses = args;
+    // Only override nodeAddresses if explicit addresses are provided
+    // Check if args contain actual addresses (contain ':' for port)
+    const explicitAddresses = args.filter(arg =>
+        arg.includes(':') &&
+        !arg.startsWith('--') &&
+        !isNaN(parseInt(arg.split(':')[1]))
+    );
+
+    if (explicitAddresses.length > 0) {
+        nodeAddresses = explicitAddresses;
     }
 
     try {
@@ -433,7 +442,8 @@ async function main() {
         if (process.argv.includes('--demo')) {
             await runDemo(client);
         } else if (process.argv.includes('--test')) {
-            const numOps = parseInt(process.argv[process.argv.indexOf('--test') + 1]) || 100;
+            const testIndex = process.argv.indexOf('--test');
+            const numOps = parseInt(process.argv[testIndex + 1]) || 100;
             await client.performanceTest(numOps);
         } else {
             await client.startInteractiveCLI();
